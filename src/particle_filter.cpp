@@ -24,7 +24,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 		return;
 
   // How many particle do I need ? Not clear here how decide...
-	num_particles = 1000;
+	num_particles = 100;
 	default_random_engine gen;
 
 	normal_distribution<double> dist_x(x, std[0]);
@@ -85,26 +85,26 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 	std::vector<LandmarkObs>::iterator it_o;
 	for(it_o = observations.begin(); it_o != observations.end(); ++it_o) {
 		LandmarkObs& obs = *it_o;
-		//cout << " Observation (prediction) x = " << obs.x << " y = " << obs.y << " id = " << obs.id << " size = " << observations.size() << endl;
+		cout << " Observation (prediction) x = " << obs.x << " y = " << obs.y << " id = " << obs.id << " size = " << observations.size() << endl;
 		int min_idx = 0;
 		double min_dist = std::numeric_limits<double>::max();
 		for(it_p = predicted.begin(); it_p != predicted.end(); ++it_p) {
 			double tmp_dist = dist(it_o->x, it_o->y, it_p->x, it_p->y);
-			//cout << "\tPredicted (landmark) x = " << it_p->x << " y = " << it_p->y << " id = " << it_p->id <<  " distance  = " << tmp_dist << endl;
+			cout << "\tPredicted (landmark) x = " << it_p->x << " y = " << it_p->y << " id = " << it_p->id <<  " distance  = " << tmp_dist << endl;
 			if(tmp_dist < min_dist) {
 				min_dist = tmp_dist;
-				min_idx = it_p - predicted.begin();
-				//cout << "\t\twe have a new min distance " << min_dist << " at element " << min_idx << endl;
+				min_idx = it_p->id;
+				cout << "\t\twe have a new min distance " << min_dist << " at id elem " << min_idx << endl;
 			}
 		}
 		obs.id = min_idx;
 	}
-	//cout << "Print the associated LANDMARKS" << endl;
+  cout << "ASSOCIATION LANDMARKS" << endl;
 	for(it_o = observations.begin(); it_o != observations.end(); ++it_o) {
 			LandmarkObs& aaa = *it_o;
-			//cout << " Observation modified (prediction) x = " << aaa.x << " y = " << aaa.y << " id = " << aaa.id << endl;
+			cout << " Observation modified (prediction) x = " << aaa.x << " y = " << aaa.y << " id = " << aaa.id << endl;
 	}
-  //cout << "FINISHED ASSOCIATION LANDMARKS" << endl;
+  cout << "FINISHED ASSOCIATION LANDMARKS" << endl;
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
@@ -121,7 +121,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   for the fact that the map's y-axis actually points downwards.)
 	//   http://planning.cs.uiuc.edu/node99.html
   double weights_sum = 0;
-
+  cout << "SENSOR RANGE = " << sensor_range << endl;
 	// std::vector<LandmarkObs> landmarks;
 	// for(int i = 0; i < map_landmarks.landmark_list.size(); ++i) {
 	// 		double x_lm = map_landmarks.landmark_list.at(i).x_f;
@@ -174,9 +174,9 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 				double coeff = 1/(2 * M_PI * std_x * std_y);
 				for(int j=0; j < observations.size(); ++j) {
 						const LandmarkObs& obs = observations.at(j);
-						const Map::single_landmark_s& land = map_landmarks.landmark_list.at(obs.id);
-						//cout << "Particle " << i << " sample: " << j << ": from particle x = " << obs.x << " y = " << obs.y << " id = " << obs.id << endl;
-						//cout << "\t Landmark x = " << land.x << " y = " << land.y << "id = " <<  land.id << endl;
+						const Map::single_landmark_s& land = map_landmarks.landmark_list.at(obs.id-1);
+						cout << "Particle " << i << " sample: " << j << ": from particle x = " << obs.x << " y = " << obs.y << " id = " << obs.id << endl;
+						cout << "\t Landmark x = " << land.x_f << " y = " << land.y_f << "id = " <<  land.id_i << endl;
 						double x_term = pow((obs.x - land.x_f), 2) / (2 * pow(std_x, 2));
 					  double y_term = pow((obs.y - land.y_f),2 ) / (2 * pow(std_y, 2));
             // Product of all terms
