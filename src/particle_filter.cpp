@@ -57,23 +57,25 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	normal_distribution<double> noise_y(0, std_pos[1]);
 	normal_distribution<double> noise_theta(0, std_pos[2]);
 
-
-  double coeff1 = velocity / yaw_rate;
-  double coeff2 = yaw_rate * delta_t;
-
 	for (int i = 0; i < num_particles; ++i) {
 		//if(i < 4)
 		//	std::cout << i << ": " << particles.at(i).x << "\t" << particles.at(i).y << "\t" << particles.at(i).theta << std::endl;
-/////////if (abs(yaw_rate) > 0.00001) {
 		Particle &p = particles.at(i);
-		p.x += coeff1 * (sin(p.theta + coeff2) - sin(p.theta)) + noise_x(gen);
-    p.y += coeff1 * (-cos(p.theta + coeff2) + cos(p.theta)) + noise_y(gen);
-    p.theta += coeff2 + noise_theta(gen);
-	}
+		if (abs(yaw_rate) > std::numeric_limits<float>::epsilon()) {
+			double coeff1 = velocity / yaw_rate;
+			double coeff2 = yaw_rate * delta_t;
+			p.x += coeff1 * (sin(p.theta + coeff2) - sin(p.theta)) + noise_x(gen);
+    	p.y += coeff1 * (-cos(p.theta + coeff2) + cos(p.theta)) + noise_y(gen);
+    	p.theta += coeff2 + noise_theta(gen);
+		} else {
+			cout << "xXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX yawl < 0" << endl;
+	  	p.x += velocity * delta_t * cos(p.theta) + noise_x(gen);
+			p.y += velocity * delta_t * sin(p.theta) + noise_y(gen);
+		}
 	//std::cout << "dopo update vediamo un po'" << std::endl;
 	//for (int i = 0; i < 4; ++i)
 	//	std::cout << i << ": " << particles.at(i).x << "\t" << particles.at(i).y << "\t" << particles.at(i).theta << std::endl;
-
+	}
 }
 
 void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::vector<LandmarkObs>& observations) {
