@@ -70,53 +70,35 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 	std::vector<LandmarkObs>::iterator it_o;
 	for(it_o = observations.begin(); it_o != observations.end(); ++it_o) {
  	  LandmarkObs& obs = *it_o;
-		//cout << " Observation (prediction) x = " << obs.x << " y = " << obs.y << " id = " << obs.id << " size = " << observations.size() << endl;
 		int min_idx = 0;
 		double min_dist = std::numeric_limits<double>::max();
 		for(it_p = predicted.begin(); it_p != predicted.end(); ++it_p) {
 			double tmp_dist = dist(it_o->x, it_o->y, it_p->x, it_p->y);
-			//cout << "\tPredicted (landmark) x = " << it_p->x << " y = " << it_p->y << " id = " << it_p->id <<  " distance  = " << tmp_dist << endl;
 			if(tmp_dist < min_dist) {
 				min_dist = tmp_dist;
 				min_idx = it_p->id;
-				//cout << "\t\twe have a new min distance " << min_dist << " at id elem " << min_idx << endl;
 			}
 		}
+		// keep track of the assotiation by the ID! but remember that this id is
+		// one bigger that the index that indicates the position of the associated data!!
 		obs.id = min_idx;
 	}
-  // cout << "ASSOCIATION LANDMARKS" << endl;
-	// for(it_o = observations.begin(); it_o != observations.end(); ++it_o) {
-	// 		LandmarkObs& aaa = *it_o;
-	// 		cout << " Observation modified (prediction) x = " << aaa.x << " y = " << aaa.y << " id = " << aaa.id << endl;
-	// }
-  // cout << "FINISHED ASSOCIATION LANDMARKS" << endl;
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		std::vector<LandmarkObs> observations, Map map_landmarks) {
-	// TODO: Update the weights of each particle using a mult-variate Gaussian distribution. You can read
-	//   more about this distribution here: https://en.wikipedia.org/wiki/Multivariate_normal_distribution
-	// NOTE: The observations are given in the VEHICLE'S coordinate system. Your particles are located
-	//   according to the MAP'S coordinate system. You will need to transform between the two systems.
-	//   Keep in mind that this transformation requires both rotation AND translation (but no scaling).
-	//   The following is a good resource for the theory:
-	//   https://www.willamette.edu/~gorr/classes/GeneralGraphics/Transforms/transforms2d.htm
-	//   and the following is a good resource for the actual equation to implement (look at equation
-	//   3.33. Note that you'll need to switch the minus sign in that equation to a plus to account
-	//   for the fact that the map's y-axis actually points downwards.)
-	//   http://planning.cs.uiuc.edu/node99.html
-//  double weights_sum = 0;
 
   for(int i=0; i < num_particles; ++i) {
         Particle &p = particles.at(i);
-				std::vector<LandmarkObs> map_coord_observations;
 				// Convert coordinates from car system to map coordinates
+				std::vector<LandmarkObs> map_coord_observations;
         for(int j = 0; j < observations.size(); ++j) {
 						LandmarkObs map_coord_observation;
 						double x = observations.at(j).x;
 						double y = observations.at(j).y;
 						map_coord_observation.x = p.x + x * cos(p.theta) - y * sin(p.theta);
 						map_coord_observation.y = p.y + x * sin(p.theta) + y * cos(p.theta);
+						// we will use this id when associating map_coords with prediction
 						map_coord_observation.id = -1;
 
 						map_coord_observations.push_back(map_coord_observation);
@@ -130,7 +112,6 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
             int id = lm.id_i;
             double distance = dist(x, y, p.x, p.y);
             if(distance <= sensor_range) {
-									//cout << " Distance for predicted landmark is " << distance << " id = " << id << endl;
 									LandmarkObs land_obs;
 			 						land_obs.x = x;
 				  				land_obs.y = y;
@@ -139,7 +120,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
             }
         }
 
-				// Now we have inside observations in the id the index of the
+				// Now we have inside map_coord_observations in the id the index of the
 				// closest landmak associated with the current observation...and we
 				// modify the map coord entry associating the id of the corresponding
 				// predicted element.
@@ -152,57 +133,50 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 				double coeff = 1/(2 * M_PI * std_x * std_y);
 				for(int j=0; j < map_coord_observations.size(); ++j) {
 						const LandmarkObs& obs = map_coord_observations.at(j);
+						// remember that obs.id was 1 bigger than the value of the index!!!
 						const Map::single_landmark_s& land = map_landmarks.landmark_list.at(obs.id-1);
-						//cout << "Particle " << i << " sample: " << j << ": from observation x = " << obs.x << " y = " << obs.y << " id - 1= " << obs.id-1 << endl;
-						//cout << "\t associated landmark x = " << land.x_f << " y = " << land.y_f << "id = " <<  land.id_i << endl;
 						double x_term = pow((obs.x - land.x_f), 2) / (2 * pow(std_x, 2));
 					  double y_term = pow((obs.y - land.y_f), 2 ) / (2 * pow(std_y, 2));
             // Product of all terms
 					  prob *= coeff * exp(-(x_term + y_term));
 				}
-				//cout << "Particle " << i << ": total weight is " << prob << endl << endl;
 			  p.weight = prob;
 				weights[i] = prob;
-		//		weights_sum += prob;
   }
-	// Normalize weights in order to have a prob distribution
-	//for(int i = 0; i < weights.size(); ++i)
-	//	weights[i] /= weights_sum;
 }
 
 // Cleaner code here but I'd rather prefer trying to implement wheel algorighm
-void ParticleFilter::resample() {
-	// TODO: Resample particles with replacement with probability proportional to their weight.
-	// NOTE: You may find std::discrete_distribution helpful here.
-	//   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
-  default_random_engine gen;
-  discrete_distribution<int> index_distrib(weights.begin(), weights.end());
-  std::vector<Particle> resampled;
-  for (int i = 0; i < num_particles; ++i)
-    resampled.push_back(particles.at(index_distrib(gen)));
+// anway both passes the tests :)))
 
-  particles = resampled;
-}
-
-// Wheel algorithm
 // void ParticleFilter::resample() {
 //   default_random_engine gen;
-// 	double max_weight = *max_element(weights.begin(), weights.end());
-// 	uniform_real_distribution <double> beta_dist(0.0, 2 * max_weight);
-//   double beta = 0.0;
-// 	unsigned int index = rand() % num_particles;
-// 	std::vector <Particle> resampled;
+//   discrete_distribution<int> index_distrib(weights.begin(), weights.end());
+//   std::vector<Particle> resampled;
+//   for (int i = 0; i < num_particles; ++i)
+//     resampled.push_back(particles.at(index_distrib(gen)));
 //
-// 	for(int i = 0; i < num_particles; ++i) {
-// 		beta = beta_dist(gen);
-// 		while(beta > weights.at(index)) {
-// 			beta -= weights.at(index);
-// 			index = (index + 1) % num_particles;
-// 		}
-// 		resampled.push_back(particles.at(index));
-//   }
-// 	particles = resampled;
+//   particles = resampled;
 // }
+
+//Wheel algorithm
+void ParticleFilter::resample() {
+  default_random_engine gen;
+	double max_weight = *max_element(weights.begin(), weights.end());
+	uniform_real_distribution <double> beta_dist(0.0, 2 * max_weight);
+  double beta = 0.0;
+	unsigned int index = rand() % num_particles;
+	std::vector <Particle> resampled;
+
+	for(int i = 0; i < num_particles; ++i) {
+		beta = beta_dist(gen);
+		while(beta > weights.at(index)) {
+			beta -= weights.at(index);
+			index = (index + 1) % num_particles;
+		}
+		resampled.push_back(particles.at(index));
+  }
+	particles = resampled;
+}
 
 void ParticleFilter::write(std::string filename) {
 	// You don't need to modify this file.
