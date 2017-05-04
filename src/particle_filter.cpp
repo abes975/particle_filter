@@ -58,7 +58,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
     	p.y += coeff1 * (-cos(p.theta + coeff2) + cos(p.theta)) + noise_y(gen);
     	p.theta += coeff2 + noise_theta(gen);
 		} else {
-	  	p.x += velocity * delta_t * cos(p.theta) + noise_x(gen);
+  		p.x += velocity * delta_t * cos(p.theta) + noise_x(gen);
 			p.y += velocity * delta_t * sin(p.theta) + noise_y(gen);
 		}
 	}
@@ -86,8 +86,12 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
-		std::vector<LandmarkObs> observations, Map map_landmarks) {
+	std::vector<LandmarkObs> observations, Map map_landmarks) {
 
+	double prob;
+	double std_x = std_landmark[0];
+	double std_y = std_landmark[1];
+	double coeff = 1/(2 * M_PI * std_x * std_y);
   for(int i=0; i < num_particles; ++i) {
         Particle &p = particles.at(i);
 				// Convert coordinates from car system to map coordinates
@@ -127,10 +131,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
       	dataAssociation(predicted, map_coord_observations);
 
         // we can proceed in calculating the weights....
-				double prob = 1.0;
-				double std_x = std_landmark[0];
-				double std_y = std_landmark[1];
-				double coeff = 1/(2 * M_PI * std_x * std_y);
+				prob = 1.0;
 				for(int j=0; j < map_coord_observations.size(); ++j) {
 						const LandmarkObs& obs = map_coord_observations.at(j);
 						// remember that obs.id was 1 bigger than the value of the index!!!
